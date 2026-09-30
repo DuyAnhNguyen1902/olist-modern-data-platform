@@ -36,6 +36,50 @@ def initialize_database(settings: Settings) -> None:
         run_sql_file(connection, PROJECT_ROOT / "sql/01_create_schemas.sql")
         run_sql_file(connection, PROJECT_ROOT / "sql/02_create_raw_tables.sql")
         run_sql_file(connection, PROJECT_ROOT / "sql/03_create_staging_views.sql")
+    initialize_bi_access(settings)
+
+
+def initialize_bi_access(settings: Settings) -> None:
+    """Create a least-privilege login for BI tools and grant read-only mart access."""
+    import psycopg
+    from psycopg import sql
+
+    role = sql.Identifier(settings.bi_user)
+    with psycopg.connect(settings.postgres_dsn) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = %s)", (settings.bi_user,)
+        )
+        if not cursor.fetchone()[0]:
+            cursor.execute(
+                sql.SQL("CREATE ROLE {} LOGIN PASSWORD {}").format(
+                    role, sql.Literal(settings.bi_password)
+                )
+            )
+        else:
+            cursor.execute(
+                sql.SQL("ALTER ROLE {} WITH LOGIN PASSWORD {}").format(
+                    role, sql.Literal(settings.bi_password)
+                )
+            )
+
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS analytics_dbt")
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS warehouse_dbt")
+        cursor.execute(
+            sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(
+                sql.Identifier(settings.postgres_db), role
+            )
+        )
+        for schema_name in ("analytics_dbt", "warehouse_dbt"):
+            schema = sql.Identifier(schema_name)
+            cursor.execute(sql.SQL("GRANT USAGE ON SCHEMA {} TO {}").format(schema, role))
+            cursor.execute(
+                sql.SQL("GRANT SELECT ON ALL TABLES IN SCHEMA {} TO {}").format(schema, role)
+            )
+            cursor.execute(
+                sql.SQL(
+                    "ALTER DEFAULT PRIVILEGES IN SCHEMA {} GRANT SELECT ON TABLES TO {}"
+                ).format(schema, role)
+            )
 
 
 def _sha256(path: Path) -> str:

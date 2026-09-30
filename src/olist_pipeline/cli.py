@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from .database import (
     build_warehouse,
+    initialize_bi_access,
     initialize_database,
     load_raw_data,
     reconcile_raw_counts,
@@ -35,6 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("profile", help="Tạo báo cáo data profiling")
     subparsers.add_parser("validate", help="Kiểm tra data contract cho CSV")
     subparsers.add_parser("init-db", help="Tạo schema và bảng PostgreSQL")
+    subparsers.add_parser("init-bi", help="Tạo read-only role cho công cụ BI")
     load_parser = subparsers.add_parser("load-raw", help="Nạp CSV vào PostgreSQL RAW")
     load_parser.add_argument("--replace", action="store_true", help="Nạp lại bảng raw")
     subparsers.add_parser("check-raw", help="Đối chiếu số dòng CSV với RAW")
@@ -84,6 +86,11 @@ def main() -> None:
     if args.command == "init-db":
         initialize_database(settings)
         print("Created PostgreSQL schemas, raw tables, and staging views.")
+        return
+
+    if args.command == "init-bi":
+        initialize_bi_access(settings)
+        print(f"Created read-only BI role: {settings.bi_user}")
         return
 
     if args.command == "load-raw":

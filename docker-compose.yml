@@ -38,6 +38,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
       POSTGRES_USER: ${POSTGRES_USER:-ecommerce}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_dev}
+      BI_USER: ${BI_USER:-metabase_reader}
+      BI_PASSWORD: ${BI_PASSWORD:-metabase_dev}
       DBT_POSTGRES_HOST: postgres
       DBT_POSTGRES_PORT: 5432
       DBT_POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
@@ -112,6 +114,22 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  metabase:
+    image: metabase/metabase:v0.63.17.3
+    container_name: olist-metabase
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MB_DB_FILE: /metabase-data/metabase.db
+      JAVA_TIMEZONE: Asia/Ho_Chi_Minh
+    ports:
+      - "3000:3000"
+    volumes:
+      - metabase_data:/metabase-data
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   airflow_home:
+  metabase_data:

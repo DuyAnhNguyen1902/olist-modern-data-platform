@@ -4,7 +4,9 @@ Dự án portfolio Data Engineering sử dụng dữ liệu thương mại đi�
 theo từng phiên bản chạy được, bắt đầu với PostgreSQL + Python + Kimball, sau đó mở rộng sang
 Airflow, Snowflake, dbt, Kafka và Spark.
 
-## Phiên bản hiện tại (v0.3)
+![Olist E-commerce Performance dashboard](docs/images/metabase-dashboard.png)
+
+## Phiên bản hiện tại (v0.4)
 
 - Giữ nguyên 9 CSV nguồn trong vùng `data/raw/olist`.
 - Data profiling tạo báo cáo JSON.
@@ -17,6 +19,26 @@ Airflow, Snowflake, dbt, Kafka và Spark.
 - Incremental ingestion dùng PostgreSQL source, `updated_at`, atomic watermark và dynamic tasks.
 - dbt quản lý staging models, Kimball marts, lineage và automated data tests.
 - GitHub Actions kiểm tra formatting, lint, Python tests, dbt parse và Docker Compose.
+- Metabase trực quan hóa KPI từ các dbt presentation marts qua read-only database role.
+
+## Kết quả nổi bật
+
+- Xử lý 9 bộ dữ liệu Olist, trong đó bảng geolocation có hơn 1 triệu bản ghi.
+- 21 dbt models cho staging, Kimball warehouse và analytics presentation layer.
+- 78 generic data tests cùng 7 singular business-rule tests.
+- Full-refresh và incremental pipeline được điều phối bằng Airflow.
+- Incremental ingestion dùng watermark, upsert và có thể chạy lại an toàn.
+- Metabase dashboard cung cấp KPI doanh thu, đơn hàng, giao hàng và phân tích địa lý.
+- BI user chỉ có quyền đọc warehouse/analytics, không thể ghi dữ liệu hoặc đọc RAW.
+
+KPI của bộ dữ liệu hiện tại:
+
+| KPI | Giá trị |
+|---|---:|
+| Total orders | 99,443 |
+| Total revenue | R$16,009,091.92 |
+| Average order value | R$160.99 |
+| Late delivery rate | 8.11% |
 
 ## Kiến trúc hiện tại
 
@@ -36,6 +58,15 @@ dbt Kimball warehouse (`warehouse_dbt`)
    |-- fact_order_items
    |-- fact_payments
    `-- fact_order_lifecycle
+   v
+dbt presentation marts (`analytics_dbt`)
+   |-- mart_executive_kpis
+   |-- mart_sales_daily
+   |-- mart_category_performance
+   |-- mart_state_performance
+   `-- mart_order_status
+   v
+Metabase (`localhost:3000`)
 ```
 
 ## Khởi động trên Windows
@@ -91,6 +122,9 @@ catalog khi khởi động. Sau khi thay đổi model, refresh docs bằng:
 docker compose restart dbt-docs
 ```
 
+Metabase chạy tại `http://localhost:3000`. Hướng dẫn kết nối và dashboard nằm trong tài liệu
+[Visualization](docs/visualization.md).
+
 Có thể trigger từ terminal:
 
 ```powershell
@@ -130,6 +164,8 @@ olist-pipeline validate-warehouse
 dbt staging views tự chọn phiên bản mới nhất theo natural key, sau đó dbt incremental models
 upsert các dimension/fact bị thay đổi.
 
+![Successful Airflow incremental DAG run](docs/images/airflow-incremental-dag.png)
+
 ## Chạy dbt
 
 Sau khi cài lại package và rebuild image Airflow:
@@ -144,7 +180,10 @@ dbt tạo hai schema riêng để bạn có thể đối chiếu với phiên b�
 
 - `staging_dbt`: clean, cast và deduplicate RAW.
 - `warehouse_dbt`: dimensions và facts theo Kimball.
+- `analytics_dbt`: presentation marts đã tổng hợp đúng grain cho BI.
 - `dbt_test_failures`: lưu các dòng vi phạm test để debug.
+
+![dbt lineage from RAW sources to analytics marts](docs/images/dbt-lineage.png)
 
 Các lần sau chỉ cần chạy `olist-pipeline dbt-build`. Trong Airflow, full-refresh DAG truyền
 `--full-refresh`, còn incremental DAG chạy dbt theo chế độ incremental.
@@ -167,6 +206,32 @@ python -m olist_pipeline.cli profile
 - Load lại raw data chỉ thực hiện khi chủ động truyền `--replace`.
 - Mỗi fact table có một grain riêng; không join trực tiếp item với payment để tính doanh thu.
 
+## Dashboard BI
+
+Dashboard **Olist E-commerce Performance** gồm:
+
+- Bốn KPI cards: revenue, orders, average order value và late-delivery rate.
+- Monthly Revenue Trend.
+- Top Product Categories by Revenue.
+- Top States by Revenue.
+- Order Status Distribution.
+- Top States by Late Delivery Rate.
+
+Dashboard lịch sử giới hạn purchase date trước năm 2019. Bản ghi có ngày hiện tại được tạo có
+chủ đích bởi incremental simulation và được giữ lại làm bằng chứng kiểm thử pipeline, nhưng
+không được trộn vào phân tích dữ liệu Olist lịch sử.
+
+Dashboard của Metabase được lưu trong Docker volume `metabase_data`. Không chạy
+`docker compose down -v` nếu muốn giữ tài khoản, câu hỏi và dashboard đã tạo.
+
+## Portfolio evidence
+
+Các bằng chứng trực quan được lưu trong `docs/images/`:
+
+1. `metabase-dashboard.png` — toàn bộ dashboard đã hoàn thiện (đã thêm).
+2. `airflow-incremental-dag.png` — một DAG run thành công (đã thêm).
+3. `dbt-lineage.png` — lineage graph từ source đến analytics marts (đã thêm).
+
 ## Tài liệu
 
 - [Mô hình dữ liệu](docs/data_model.md)
@@ -177,3 +242,4 @@ python -m olist_pipeline.cli profile
 - [dbt transformations](docs/dbt.md)
 - [End-to-end validation evidence](docs/end_to_end_validation.md)
 - [CI/CD workflow](docs/ci_cd.md)
+- [Metabase visualization](docs/visualization.md)

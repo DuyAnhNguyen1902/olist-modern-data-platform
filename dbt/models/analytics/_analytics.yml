@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: mart_executive_kpis
+    description: One-row executive summary for headline dashboard KPI cards.
+    columns:
+      - name: metric_scope
+        data_tests: [not_null, unique]
+      - name: total_orders
+        data_tests: [not_null]
+      - name: total_revenue
+        data_tests: [not_null]
+  - name: mart_sales_daily
+    description: Daily order and revenue trend at one row per purchase date.
+    columns:
+      - name: date_key
+        data_tests: [not_null, unique]
+      - name: full_date
+        data_tests: [not_null, unique]
+  - name: mart_category_performance
+    description: Product category performance using order-item merchandise value.
+    columns:
+      - name: category_name
+        data_tests: [not_null, unique]
+  - name: mart_state_performance
+    description: Revenue, orders, and delivery performance by customer state.
+    columns:
+      - name: customer_state
+        data_tests: [not_null, unique]
+  - name: mart_order_status
+    description: Distribution and revenue contribution by current order status.
+    columns:
+      - name: order_status
+        data_tests: [not_null, unique]

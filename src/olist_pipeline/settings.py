@@ -28,6 +28,8 @@ class Settings:
     postgres_db: str = os.getenv("POSTGRES_DB", "ecommerce")
     postgres_user: str = os.getenv("POSTGRES_USER", "ecommerce")
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "ecommerce_dev")
+    bi_user: str = os.getenv("BI_USER", "metabase_reader")
+    bi_password: str = os.getenv("BI_PASSWORD", "metabase_dev")
     data_dir: Path = PROJECT_ROOT / os.getenv("DATA_DIR", "data/raw/olist")
     quality_config: Path = PROJECT_ROOT / os.getenv("QUALITY_CONFIG", "config/data_contracts.json")
     reports_dir: Path = PROJECT_ROOT / os.getenv("REPORTS_DIR", "reports")

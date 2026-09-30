@@ -20,6 +20,10 @@ models:
       +schema: warehouse_dbt
       +materialized: table
       +tags: [kimball]
+    analytics:
+      +schema: analytics_dbt
+      +materialized: table
+      +tags: [bi, presentation]
 
 tests:
   olist_analytics:
