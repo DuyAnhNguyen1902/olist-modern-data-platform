@@ -1,0 +1,117 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: olist-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
+      POSTGRES_USER: ${POSTGRES_USER:-ecommerce}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_dev}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ecommerce} -d ${POSTGRES_DB:-ecommerce}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  airflow:
+    image: deproject2-airflow
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: olist-airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      PYTHONPATH: /opt/project/src
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
+      POSTGRES_USER: ${POSTGRES_USER:-ecommerce}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_dev}
+      DBT_POSTGRES_HOST: postgres
+      DBT_POSTGRES_PORT: 5432
+      DBT_POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
+      DBT_POSTGRES_USER: ${POSTGRES_USER:-ecommerce}
+      DBT_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_dev}
+      DATA_DIR: data/raw/olist
+      QUALITY_CONFIG: config/data_contracts.json
+      REPORTS_DIR: reports
+      DBT_PROJECT_DIR: /opt/project/dbt
+      DBT_PROFILES_DIR: /opt/project/dbt
+    command: standalone
+    ports:
+      - "8080:8080"
+    volumes:
+      - airflow_home:/opt/airflow
+      - ./airflow/dags:/opt/airflow/dags:ro
+      - ./airflow/logs:/opt/airflow/logs
+      - ./src:/opt/project/src:ro
+      - ./sql:/opt/project/sql:ro
+      - ./config:/opt/project/config:ro
+      - ./data:/opt/project/data:ro
+      - ./reports:/opt/project/reports
+      # dbt writes compiled SQL, run results, and logs beside the project.
+      - ./dbt:/opt/project/dbt
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
+  dbt-docs:
+    image: deproject2-airflow
+    container_name: olist-dbt-docs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow:
+        condition: service_healthy
+    environment:
+      DBT_POSTGRES_HOST: postgres
+      DBT_POSTGRES_PORT: 5432
+      DBT_POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
+      DBT_POSTGRES_USER: ${POSTGRES_USER:-ecommerce}
+      DBT_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_dev}
+    entrypoint: ["/usr/bin/dumb-init", "--", "/bin/bash", "-c"]
+    command:
+      - >-
+        dbt docs generate
+        --project-dir /opt/project/dbt
+        --profiles-dir /opt/project/dbt
+        --target-path /opt/project/dbt/docs_target
+        --no-use-colors
+        && exec dbt docs serve
+        --project-dir /opt/project/dbt
+        --profiles-dir /opt/project/dbt
+        --target-path /opt/project/dbt/docs_target
+        --host 0.0.0.0
+        --port 8081
+        --no-browser
+        --no-use-colors
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./dbt:/opt/project/dbt
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8081"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  airflow_home:

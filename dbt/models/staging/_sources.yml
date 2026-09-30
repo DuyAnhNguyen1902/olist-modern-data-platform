@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Immutable landing tables loaded from Olist CSV and incremental OLTP extracts.
+    schema: raw
+    tables:
+      - name: customers
+      - name: orders
+      - name: order_items
+      - name: payments
+      - name: reviews
+      - name: products
+      - name: sellers
+      - name: geolocation
+      - name: category_translation

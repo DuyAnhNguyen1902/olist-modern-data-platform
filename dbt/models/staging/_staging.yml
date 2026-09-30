@@ -1,0 +1,75 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: Latest customer version selected from append-only RAW history.
+    columns:
+      - name: customer_id
+        data_tests: [not_null, unique]
+  - name: stg_orders
+    description: Latest order state with normalized statuses and typed lifecycle timestamps.
+    columns:
+      - name: order_id
+        data_tests: [not_null, unique]
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+      - name: order_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [approved, canceled, created, delivered, invoiced, processing, shipped, unavailable]
+  - name: stg_order_items
+    description: Latest version of each order-item grain, typed for monetary calculations.
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: order_item_id
+        data_tests: [not_null]
+      - name: price
+        data_tests: [not_null]
+  - name: stg_payments
+    description: Latest version of each order-payment sequence.
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: payment_sequential
+        data_tests: [not_null]
+      - name: payment_value
+        data_tests: [not_null]
+  - name: stg_products
+    description: Current product attributes with source misspellings renamed consistently.
+    columns:
+      - name: product_id
+        data_tests: [not_null, unique]
+  - name: stg_sellers
+    description: Current seller attributes and normalized location fields.
+    columns:
+      - name: seller_id
+        data_tests: [not_null, unique]
+  - name: stg_geolocation
+    description: One representative latitude/longitude pair per ZIP-code prefix.
+    columns:
+      - name: geolocation_zip_code_prefix
+        data_tests: [not_null, unique]
+  - name: stg_category_translation
+    description: Portuguese-to-English product category lookup.
+    columns:
+      - name: product_category_name
+        data_tests: [not_null, unique]
+  - name: stg_reviews
+    description: Cleaned customer reviews at the source review grain.

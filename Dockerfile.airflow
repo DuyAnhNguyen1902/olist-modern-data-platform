@@ -1,0 +1,9 @@
+FROM apache/airflow:3.3.2-python3.12
+
+COPY --chown=airflow:root pyproject.toml /opt/project/pyproject.toml
+COPY --chown=airflow:root src /opt/project/src
+COPY --chown=airflow:root dbt /opt/project/dbt
+
+# Keep the project package and Airflow in the same Python environment. Source code is
+# mounted read-only at runtime so DAG development does not require rebuilding the image.
+RUN pip install --no-cache-dir -e /opt/project

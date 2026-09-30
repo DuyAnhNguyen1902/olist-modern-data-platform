@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "olist-modern-data-platform"
+version = "0.1.0"
+description = "An end-to-end data engineering portfolio project built from the Olist e-commerce dataset."
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=2.2,<3",
+  "psycopg[binary]>=3.2,<4",
+  "dbt-postgres>=1.9,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "ruff>=0.9,<1",
+]
+
+[project.scripts]
+olist-pipeline = "olist_pipeline.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

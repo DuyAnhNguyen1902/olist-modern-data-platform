@@ -1,0 +1,110 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: Conformed calendar dimension spanning every operational source date.
+    columns:
+      - name: date_key
+        data_tests: [not_null, unique]
+      - name: full_date
+        data_tests: [not_null, unique]
+  - name: dim_customer
+    description: Current customer dimension with a deterministic surrogate key.
+    columns:
+      - name: customer_key
+        data_tests: [not_null, unique]
+      - name: customer_id
+        data_tests: [not_null, unique]
+  - name: dim_product
+    description: Current product dimension enriched with English category names.
+    columns:
+      - name: product_key
+        data_tests: [not_null, unique]
+      - name: product_id
+        data_tests: [not_null, unique]
+  - name: dim_seller
+    description: Current seller dimension enriched with representative geolocation.
+    columns:
+      - name: seller_key
+        data_tests: [not_null, unique]
+      - name: seller_id
+        data_tests: [not_null, unique]
+  - name: fact_order_items
+    description: One row per order item.
+    columns:
+      - name: order_item_key
+        data_tests: [not_null, unique]
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+      - name: product_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_key
+      - name: seller_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_seller')
+                field: seller_key
+      - name: order_date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: shipping_date_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+  - name: fact_payments
+    description: One row per payment attempt/sequence for an order.
+    columns:
+      - name: payment_key
+        data_tests: [not_null, unique]
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+      - name: payment_date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+  - name: fact_order_lifecycle
+    description: Accumulating snapshot with one row per order and lifecycle SLA metrics.
+    columns:
+      - name: order_key
+        data_tests: [not_null, unique]
+      - name: order_id
+        data_tests: [not_null, unique]
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+      - name: purchase_date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key

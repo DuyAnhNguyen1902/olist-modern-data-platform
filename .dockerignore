@@ -1,0 +1,14 @@
+.git
+.venv
+__pycache__
+*.pyc
+*.egg-info
+data
+reports
+logs
+airflow/logs
+.env
+dbt/target
+dbt/logs
+dbt/dbt_packages
+dbt/docs_target

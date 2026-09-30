@@ -1,0 +1,11 @@
+# Keep source and configuration files identical across Windows and Linux containers.
+* text=auto eol=lf
+
+# Treat common media and archive formats as binary.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.parquet binary

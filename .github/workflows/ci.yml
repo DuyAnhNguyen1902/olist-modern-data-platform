@@ -1,0 +1,49 @@
+name: Data Platform CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Python, dbt, and Compose validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project and development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Check Python formatting
+        run: python -m ruff format --check src airflow/dags tests
+
+      - name: Lint Python
+        run: python -m ruff check src airflow/dags tests
+
+      - name: Run Python tests
+        run: python -m pytest -q
+
+      - name: Parse dbt project
+        run: dbt parse --project-dir dbt --profiles-dir dbt --no-partial-parse
+
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
